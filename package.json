@@ -1,0 +1,10 @@
+{
+  "name": "painel-closer-dsr",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Painel de avaliação de calls (Gemini) - Domine Seu Restaurante",
+  "dependencies": {
+    "@vercel/kv": "^1.0.1"
+  }
+}
