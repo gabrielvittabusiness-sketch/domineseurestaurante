@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'missing_api_key' });
 
-  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const model = process.env.GEMINI_MODEL || 'gemini-flash-latest';
   const critList = (criteria || [])
     .map((c) => `- id "${c.id}": ${c.name} (peso ${c.weight})`)
     .join('\n');
@@ -49,9 +49,18 @@ ${transcript.slice(0, 45000)}`;
     );
     const data = await r.json();
     if (!r.ok) {
-      return res.status(502).json({ error: 'gemini_error', detail: data });
+      // Mostra o motivo real que o Google devolveu, em vez de só "gemini_error".
+      const detailMsg = data?.error?.message || JSON.stringify(data).slice(0, 300);
+      return res.status(502).json({ error: `gemini_error (modelo: ${model}): ${detailMsg}` });
     }
     const text = (data?.candidates?.[0]?.content?.parts || []).map((p) => p.text).join('');
+    if (!text) {
+      const blockReason = data?.promptFeedback?.blockReason;
+      return res.status(502).json({
+        error: `resposta_vazia_do_gemini${blockReason ? ' (bloqueado: ' + blockReason + ')' : ''}`,
+        raw: data,
+      });
+    }
     let parsed;
     try {
       parsed = JSON.parse(text);
@@ -60,6 +69,6 @@ ${transcript.slice(0, 45000)}`;
     }
     return res.status(200).json(parsed);
   } catch (e) {
-    return res.status(500).json({ error: 'server_error', message: String(e) });
+    return res.status(500).json({ error: 'server_error: ' + String(e) });
   }
 }
